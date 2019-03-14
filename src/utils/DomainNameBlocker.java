@@ -136,12 +136,12 @@ public class DomainNameBlocker
 						lastcheckedtime = Utils.parseDateTime_RFC_5322(dateresponseheader.get(0));
 				}
 				if(ismodified || !localfileexists){
-					HttpURLConnection connection = request("GET", new URL(filelocation));
-					Map<String, List<String>> responseheaders = connection.getHeaderFields();
+					WebResponse response = getResponse("GET", new URL(filelocation));
+					Map<String, List<String>> responseheaders = response.getResponseHeaders();
 					List<String> etagresponseheader = responseheaders.get("ETag");
 					if(etagresponseheader!=null)
 						Files.write(localETagFilePath, etagresponseheader.get(0).getBytes(StandardCharsets.UTF_8));
-					byte[] responsebytes = getRawBytes(connection);
+					byte[] responsebytes = response.getBodyAsBytes();
 					//connection.disconnect();
 					if(filetype.matches("(?i).*\\bzip\\b.*"))
 						responsebytes = getZipEntryContentsForFilenameRegex(responsebytes, "(?i).*\\bhosts\\b.*");
@@ -217,7 +217,7 @@ public class DomainNameBlocker
 		return null;
 	}
 	
-	public static Map<String, Set<String>> getBlacklistedEntriesInText(String message, TextLocation type)
+	public static Map<String, Set<String>> getBlacklistedEntriesInText(String message, byte type)
 	{
 		final String lowercasemessage = message.toLowerCase();
 		

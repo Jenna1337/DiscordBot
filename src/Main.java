@@ -6,7 +6,9 @@ import java.io.UnsupportedEncodingException;
 import java.util.AbstractMap.SimpleEntry;
 import java.util.ArrayList;
 import discordbot.SimpleDiscordBot;
+import discordbot.TextLocation;
 import discordbot.commands.CommandManager;
+import jdk.nashorn.api.scripting.ScriptUtils;
 import net.dv8tion.jda.core.events.message.GenericMessageEvent;
 import discordbot.Permissions;
 import utils.DomainNameBlocker;
@@ -15,6 +17,8 @@ import utils.sql.SQLite3DatabaseLink;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
+import javax.script.ScriptEngine;
+import javax.script.ScriptEngineManager;
 
 @SuppressWarnings("unused")
 public class Main

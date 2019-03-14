@@ -1,13 +1,11 @@
 package discordbot;
 
-import net.dv8tion.jda.core.Permission;
 import net.dv8tion.jda.core.entities.*;
 import net.dv8tion.jda.core.events.message.GenericMessageEvent;
 import net.dv8tion.jda.core.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.core.events.message.MessageUpdateEvent;
 import net.dv8tion.jda.core.hooks.ListenerAdapter;
 import utils.DomainNameBlocker;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -75,14 +73,14 @@ public class DiscordMessageListener extends ListenerAdapter
 				TextLocation.message, message.getContentDisplay(), " posted by user <"+author.getId()+"> \""+author.getName()+"\"");
 		return locatedinblacklist;
 	}
-	private boolean handleBlacklistedText(Guild guild, MessageChannel channel, TextLocation type, String text, String cause){
-		Map<String, Set<String>> containsblacklists = DomainNameBlocker.getBlacklistedEntriesInText(text, type);
+	private boolean handleBlacklistedText(Guild guild, MessageChannel channel, TextLocation location, String text, String cause){
+		Map<String, Set<String>> containsblacklists = DomainNameBlocker.getBlacklistedEntriesInText(text, location.getMask());
 		if(containsblacklists.isEmpty())
 			return false;
 		String channelname = channel.getName();
 		String statusmessage = (guild!=null?("Guild \""+guild.getName()+"\":"):"")
 				+(channelname!=null?("Channel \""+channelname+"\":"):"")
-				+"Found blacklisted text in "+type+" \""+text.replace("\\", "\\\\")
+				+"Found blacklisted text in "+location+" \""+text.replace("\\", "\\\\")
 				.replace("\r\n", "\\r\\n").replace("\r", "\\r").replace("\n", "\\n")
 				.replace("\t", "\\t")+"\" "+(cause!=null?(cause+" "):"")+"matching the following regex"
 				+(containsblacklists.size()!=1?"es":"")+":"
