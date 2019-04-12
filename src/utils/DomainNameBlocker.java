@@ -290,7 +290,7 @@ class SQLite3SimpleList<E extends Serializable> implements Set<E>{
 	}
 	public boolean add(E e){
 		synchronized(this){
-			db.sendCommand("INSERT INTO "+tablename+" (vals) VALUES ("+e.toString()+")");
+			db.sendCommandNoFail("INSERT INTO "+tablename+" (vals) VALUES ("+e.toString()+")");
 			// TODO Auto-generated method stub
 			return false;
 		}
@@ -354,7 +354,7 @@ class SQLite3SimpleList<E extends Serializable> implements Set<E>{
 	}
 	public void clear(){
 		synchronized(this){
-			db.sendCommand("DROP TABLE "+tablename);
+			db.sendCommandNoFail("DROP TABLE "+tablename);
 			set.clear();
 		}
 	}

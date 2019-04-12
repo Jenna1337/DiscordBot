@@ -12,8 +12,8 @@ import java.util.stream.Collectors;
 
 public class DiscordMessageListener extends ListenerAdapter
 {
-	SimpleDiscordBot bot;
-	public DiscordMessageListener(SimpleDiscordBot bot){
+	AbstractDiscordBot bot;
+	public DiscordMessageListener(AbstractDiscordBot bot){
 		this.bot=bot;
 	}
 	@Override
@@ -63,35 +63,42 @@ public class DiscordMessageListener extends ListenerAdapter
 	}
 	private boolean checkBlacklists(GenericMessageEvent event, final User author, final Member member, final Message message){
 		boolean locatedinblacklist = false;
-		locatedinblacklist|=handleBlacklistedText(event.getGuild(), event.getChannel(), TextLocation.username, author.getName(), null);
+		Guild guild = event.getGuild();
+		MessageChannel channel = event.getChannel();
+		locatedinblacklist|=handleBlacklistedText(guild, channel, TextLocation.username, author.getName(), null);
 		if(member!=null){
 			String nickname = member.getNickname();
 			if(nickname!=null)
-				locatedinblacklist|=handleBlacklistedText(event.getGuild(), event.getChannel(), TextLocation.nickname, nickname, null);
+				locatedinblacklist|=handleBlacklistedText(guild, channel, TextLocation.nickname, nickname, null);
 		}
-		locatedinblacklist|=handleBlacklistedText(event.getGuild(), event.getChannel(),
+		locatedinblacklist|=handleBlacklistedText(guild, channel,
 				TextLocation.message, message.getContentDisplay(), " posted by user <"+author.getId()+"> \""+author.getName()+"\"");
 		return locatedinblacklist;
 	}
 	private boolean handleBlacklistedText(Guild guild, MessageChannel channel, TextLocation location, String text, String cause){
-		Map<String, Set<String>> containsblacklists = DomainNameBlocker.getBlacklistedEntriesInText(text, location.getMask());
-		if(containsblacklists.isEmpty())
-			return false;
-		String channelname = channel.getName();
-		String statusmessage = (guild!=null?("Guild \""+guild.getName()+"\":"):"")
-				+(channelname!=null?("Channel \""+channelname+"\":"):"")
-				+"Found blacklisted text in "+location+" \""+text.replace("\\", "\\\\")
-				.replace("\r\n", "\\r\\n").replace("\r", "\\r").replace("\n", "\\n")
-				.replace("\t", "\\t")+"\" "+(cause!=null?(cause+" "):"")+"matching the following regex"
-				+(containsblacklists.size()!=1?"es":"")+":"
-				+containsblacklists.entrySet().stream().map(mapentry->{
-					return "From list \""+mapentry.getKey()+"\": "+mapentry.getValue().toString();
-				}).collect(Collectors.joining("\r\n","\r\n","\r\n"));
-		MessageChannel auditchannel = bot.auditchannels.get(guild);
-		if(auditchannel!=null)
-			auditchannel.sendMessage(statusmessage).queue();
-		else
-			System.err.println(statusmessage);
-		return true;
+		Map<Guild, MessageChannel> auditchannels = bot.getAuditChannels();
+		if(auditchannels!=null && auditchannels.containsKey(guild)){
+			Map<String, Set<String>> containsblacklists = DomainNameBlocker.getBlacklistedEntriesInText(text, location.getMask());
+			if(containsblacklists.isEmpty())
+				return false;
+			String channelname = channel.getName();
+			String statusmessage = (guild!=null?("Guild \""+guild.getName()+"\":"):"")
+					+(channelname!=null?("Channel \""+channelname+"\":"):"")
+					+"Found blacklisted text in "+location+" \""+text.replace("\\", "\\\\")
+					.replace("\r\n", "\\r\\n").replace("\r", "\\r").replace("\n", "\\n")
+					.replace("\t", "\\t")+"\" "+(cause!=null?(cause+" "):"")+"matching the following regex"
+					+(containsblacklists.size()!=1?"es":"")+":"
+					+containsblacklists.entrySet().stream().map(mapentry->{
+						return "From list \""+mapentry.getKey()+"\": "+mapentry.getValue().toString();
+					}).collect(Collectors.joining("\r\n","\r\n","\r\n"));
+			
+			MessageChannel auditchannel = bot.getAuditChannels().get(guild);
+			if(auditchannel!=null)
+				auditchannel.sendMessage(statusmessage).queue();
+			else
+				System.err.println(statusmessage);
+			return true;
+		}
+		return false;
 	}
 }

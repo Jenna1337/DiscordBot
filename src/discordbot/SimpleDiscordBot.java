@@ -1,12 +1,9 @@
 package discordbot;
 
-import java.text.MessageFormat;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import javax.security.auth.login.LoginException;
-import net.dv8tion.jda.core.JDA;
-import net.dv8tion.jda.core.JDABuilder;
 import net.dv8tion.jda.core.Permission;
 import net.dv8tion.jda.core.entities.Guild;
 import net.dv8tion.jda.core.entities.ISnowflake;
@@ -16,8 +13,9 @@ import net.dv8tion.jda.core.entities.MessageChannel;
 import net.dv8tion.jda.core.entities.User;
 import net.dv8tion.jda.core.events.message.GenericMessageEvent;
 import utils.DomainNameBlocker;
+import utils.sql.BackedHashmap;
 
-public class SimpleDiscordBot
+public class SimpleDiscordBot extends AbstractDiscordBot
 {
 	static{
 		try{
@@ -26,11 +24,10 @@ public class SimpleDiscordBot
 			throw new InternalError(e);
 		}
 	}
-	private static final String INVITE_URL_BASE="https://discordapp.com/api/oauth2/authorize?client_id={0}&scope=bot&permissions={1}";
-	private final String inviteUrl, user_id;
-	private String prefix;
-	private final DiscordMessageListener listener;
 	static Map<Guild, MessageChannel> auditchannels = new HashMap<>();
+	
+	//TODO workaround Guild and MessageChannel being not Serializable (probably could use IDs instead
+	//static Map<Guild, MessageChannel> auditchannels = new BackedHashmap<Guild, MessageChannel>("data/botdb.sqlite3", "auditchannels");
 	
 	
 	private <F> void printNameAndId(F obj,int indentcount){
@@ -45,16 +42,7 @@ public class SimpleDiscordBot
 	}
 	public SimpleDiscordBot(String token, String client_id, long permissions, String user_id, String prefix) throws LoginException
 	{
-		inviteUrl = MessageFormat.format(INVITE_URL_BASE, client_id, permissions);
-		this.user_id = user_id;
-		this.prefix = prefix;
-		
-		JDA jda = new JDABuilder(token)
-				.addEventListener(listener = new DiscordMessageListener(this))
-				.build();
-		try{
-			jda.awaitReady();
-		}catch(InterruptedException e){}
+		super(token, client_id, permissions, user_id, prefix);
 		
 		jda.getGuilds().forEach(guild->{
 			printNameAndId(guild,0);
@@ -70,9 +58,6 @@ public class SimpleDiscordBot
 			printNameAndId(user, 1);
 		});
 	}
-	public String getInviteURL(){
-		return inviteUrl;
-	}
 	protected void addCommand(){
 		
 		//TODO
@@ -80,13 +65,14 @@ public class SimpleDiscordBot
 	public void handleGenericMessageEvent(GenericMessageEvent event, User author,
 			Member member, Message message)
 	{
-		// TODO Auto-generated method stub
 		MessageChannel channel = event.getChannel();
 		String msg = message.getContentDisplay().trim();
-		if(msg.startsWith(prefix+"setauditchannel") && member.hasPermission(Permission.ADMINISTRATOR)){
+		if(member!=null && msg.startsWith(prefix+"setauditchannel") && member.hasPermission(Permission.ADMINISTRATOR)){
 			auditchannels.put(event.getGuild(), channel);
 			channel.sendMessage("Audit channel set.").queue();
 		}
-		
+	}
+	public Map<Guild, MessageChannel> getAuditChannels(){
+		return auditchannels;
 	}
 }

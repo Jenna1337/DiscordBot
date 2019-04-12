@@ -11,24 +11,21 @@ import utils.Utils;
 
 public class SQLite3DatabaseLink
 {
-	private static final String sqlexecfilepath, escapedquote;
+	private static final String sqlexecfilepath;
 	static{
 		String ostypepath;
 		switch(OSInfo.getOSType()){
 			case WINDOWS:
 				ostypepath = "win";
-				escapedquote = "\"\"\"";
 				break;
 			case MACOSX:
 				ostypepath = "osx";
-				escapedquote = "\"'\"'\"";//TODO
 				break;
 			case LINUX:
 			case SOLARIS:
 			case UNKNOWN:
 			default:
 				ostypepath = "linux";
-				escapedquote = "\"'\"'\"";
 				break;
 				
 		}
@@ -39,7 +36,7 @@ public class SQLite3DatabaseLink
 	private final String dblocation, cmdstrcache;
 	private String args = "";
 	public SQLite3DatabaseLink(String databaselocation){
-		this.dblocation = databaselocation;
+		this.dblocation = databaselocation.replaceAll("[^A-Za-z0-9.!@#$%^&()_+\\-={}\\[\\],.';\\u0060~]", "");
 		cmdstrcache="\""+sqlexecfilepath+"\" "+dblocation;
 	}
 	public String getDatabaseLocation(){
@@ -59,7 +56,7 @@ public class SQLite3DatabaseLink
 	}
 	private String linesplitstr = randstr(16); 
 	private String entrysplitstr = randstr(16); 
-	public SQLQueryResponse sendCommand(String command){
+	public SQLQueryResponse sendCommand(String command) throws IOException{
 		{
 			int q=command.indexOf('\"'), a=command.indexOf('\'');
 			if(q>=0 && a<0)
@@ -70,51 +67,64 @@ public class SQLite3DatabaseLink
 				throw new IllegalArgumentException("Command must not contain both apostrophies and double quotes.");
 			command = Utils.escapeNonAscii(command);
 		}
+		while(command.contains(linesplitstr))
+			linesplitstr = randstr(linesplitstr.length()+1);
+		while(command.contains(entrysplitstr) || linesplitstr.contains(entrysplitstr) || entrysplitstr.contains(linesplitstr))
+			entrysplitstr = randstr(entrysplitstr.length()+1);
+		Process p = Runtime.getRuntime().exec(cmdstrcache+args+" -newline \""+linesplitstr+"\" -separator \""+entrysplitstr+"\" \""+command+"\"");
+		int ch;
 		try{
-			while(command.contains(linesplitstr))
-				linesplitstr = randstr(linesplitstr.length()+1);
-			while(command.contains(entrysplitstr) || linesplitstr.contains(entrysplitstr) || entrysplitstr.contains(linesplitstr))
-				entrysplitstr = randstr(entrysplitstr.length()+1);
-			Process p = Runtime.getRuntime().exec(cmdstrcache+args+" -newline "+linesplitstr+" -separator "+entrysplitstr+" \""+command+"\"");
-			int ch;
-			try{
-				p.waitFor();
-			}catch(InterruptedException e){
-			}
-			InputStream is = p.getInputStream();
-			ByteArrayOutputStream baos = new ByteArrayOutputStream();
-			while((ch=is.read())!=-1)
-				baos.write(ch);
-			is.close();
-			String output = new String(baos.toByteArray(), StandardCharsets.UTF_8);
-			is = p.getErrorStream();
-			baos = new ByteArrayOutputStream();
-			while((ch=is.read())!=-1)
-				baos.write(ch);
-			is.close();
-			String errors = new String(baos.toByteArray(), StandardCharsets.UTF_8);
-			
-			String[][] vars = Utils.unescapeNonAscii(Arrays.stream(output.split(linesplitstr)).map(line->line.split(entrysplitstr)).toArray(String[][]::new));
-			System.out.println(Arrays.deepToString(vars));
-			
-			return new SQLQueryResponse(p.exitValue(), Utils.unescapeNonAscii(Arrays.stream(output.split(linesplitstr)).map(line->line.split(entrysplitstr)).toArray(String[][]::new)), errors);
+			p.waitFor();
+		}catch(InterruptedException e){
+		}
+		InputStream is = p.getInputStream();
+		ByteArrayOutputStream baos = new ByteArrayOutputStream();
+		while((ch=is.read())!=-1)
+			baos.write(ch);
+		is.close();
+		String output = new String(baos.toByteArray(), StandardCharsets.UTF_8);
+		is = p.getErrorStream();
+		baos = new ByteArrayOutputStream();
+		while((ch=is.read())!=-1)
+			baos.write(ch);
+		is.close();
+		String errors = new String(baos.toByteArray(), StandardCharsets.UTF_8);
+		
+		String[][] vars = Utils.unescapeNonAscii(Arrays.stream(output.split(linesplitstr))
+				.map(line->line.split(entrysplitstr)).toArray(String[][]::new));
+		
+		return new SQLQueryResponse(p.exitValue(), vars, errors);
+	}
+	public SQLQueryResponse sendCommandNoFail(String command){
+		try{
+			return sendCommand(command);
 		}catch(Exception e){
 			throw new InternalError(e);
 		}
 	}
+	private static final String _internalUseIdentifierPrefix = "sqlite_";
+	public static String fixTableName(String originalName){
+		String name = originalName;
+		name = name.replace(' ', '_').replaceAll("[^A-Za-z0-9_]", "");
+		if(name.startsWith(_internalUseIdentifierPrefix))
+			name = name.substring(_internalUseIdentifierPrefix.length());
+		name = name.replaceFirst("^\\d*", "");
+		if(name.length()<=0)
+			throw new IllegalArgumentException();
+		return name;
+	}
 	public static void test() throws IOException, InterruptedException
 	{
 		// TODO Auto-generated method stub
-		String[] testcmds = {"CREATE TABLE TestTable(Name nvarchar(255), Id int)",
-				"INSERT INTO TestTable (Name, Id) VALUES ('\u00ff😉', 6)",
-				"INSERT INTO TestTable (Name, Id) VALUES ('nt❤', -54)",
+		String[] testcmds = {//"CREATE TABLE IF NOT EXISTS TestTable(Name nvarchar(255), Id int PRIMARY KEY)",
+				//"INSERT OR REPLACE INTO TestTable (Name, Id) VALUES ('\u00ff😉', 6)",
+				//"INSERT OR REPLACE INTO TestTable (Name, Id) VALUES ('nt❤', -54)",
 				"SELECT * FROM TestTable",
 				//"DROP TABLE TestTable"
 		};
 		String dblocation = "test.sqlite3";
 		SQLite3DatabaseLink db = new SQLite3DatabaseLink(dblocation);
 		//db.setArguments("-header");
-		System.out.print('<');
 		Arrays.stream(db.sendCommands(testcmds))
 		.map(SQLQueryResponse::getOutput)
 		.filter(rows->{
