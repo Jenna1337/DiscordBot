@@ -41,6 +41,10 @@ public abstract class AbstractDiscordBot
 		// TODO Auto-generated constructor stub
 	}
 	
+	public JDA getJDA(){
+		return jda;
+	}
+	
 	public String getInviteURL(){
 		return inviteUrl;
 	}
