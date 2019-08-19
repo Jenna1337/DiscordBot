@@ -6,6 +6,7 @@ import java.io.UnsupportedEncodingException;
 import java.util.AbstractMap.SimpleEntry;
 import java.util.ArrayList;
 import discordbot.SimpleDiscordBot;
+import discordbot.StandardStatusTriplets;
 import discordbot.TextLocation;
 import discordbot.commands.CommandManager;
 import jdk.nashorn.api.scripting.ScriptUtils;
@@ -66,9 +67,9 @@ public class Main
 		SimpleDiscordBot bot = new SimpleDiscordBot(botprops.getProperty("TOKEN"), botprops.getProperty("CLIENT_ID"), perms, botprops.getProperty("USER_ID"), botprops.getProperty("PREFIX"));
 		System.out.println(bot.getInviteURL());
 		bot.setAutoStatusMessageList(Arrays.asList(
-				new Triplet<OnlineStatus, Game, Boolean>(OnlineStatus.ONLINE, Game.watching(" for malicious links"), false),
-				new Triplet<OnlineStatus, Game, Boolean>(OnlineStatus.ONLINE, Game.listening(bot.getJDA().getGuilds().size()+" server" + (bot.getJDA().getGuilds().size()!=1 ? "s" : "")), false),
-				new Triplet<OnlineStatus, Game, Boolean>(OnlineStatus.ONLINE, Game.playing("Global Thermonuclear War"), false)
+				StandardStatusTriplets.WATCHING.newInstance(" for malicious links"),
+				StandardStatusTriplets.LISTENING.newInstance(bot.getJDA().getGuilds().size()+" server" + (bot.getJDA().getGuilds().size()!=1 ? "s" : "")),
+				StandardStatusTriplets.PLAYING.newInstance("Global Thermonuclear War")
 		));
 		System.out.println("Ready");
 	}
