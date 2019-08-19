@@ -9,14 +9,19 @@ import discordbot.SimpleDiscordBot;
 import discordbot.TextLocation;
 import discordbot.commands.CommandManager;
 import jdk.nashorn.api.scripting.ScriptUtils;
+import net.dv8tion.jda.core.OnlineStatus;
+import net.dv8tion.jda.core.entities.Game;
 import net.dv8tion.jda.core.events.message.GenericMessageEvent;
 import discordbot.Permissions;
 import utils.DomainNameBlocker;
 import utils.Utils;
 import utils.sql.SQLite3DatabaseLink;
+import utils.tuples.Triplet;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
+import java.util.function.Function;
+import java.util.function.Supplier;
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
 
@@ -54,9 +59,17 @@ public class Main
 					}
 				}).reduce((a,b)->(a|b)).get();
 		
+			/**
+			 * malicious
+			 */
 		System.out.println("Starting");
 		SimpleDiscordBot bot = new SimpleDiscordBot(botprops.getProperty("TOKEN"), botprops.getProperty("CLIENT_ID"), perms, botprops.getProperty("USER_ID"), botprops.getProperty("PREFIX"));
 		System.out.println(bot.getInviteURL());
+		bot.setAutoStatusMessageList(Arrays.asList(
+				new Triplet<OnlineStatus, Game, Boolean>(OnlineStatus.ONLINE, Game.listening(" for malicious links"), false),
+				new Triplet<OnlineStatus, Game, Boolean>(OnlineStatus.ONLINE, Game.watching(" server" + (bot.getJDA().getGuilds().size()!=1 ? "s" : "")), false),
+				new Triplet<OnlineStatus, Game, Boolean>(OnlineStatus.ONLINE, Game.playing("Global Thermonuclear War"), false)
+		));
 		System.out.println("Ready");
 	}
 	public static void updatePerms() throws IOException{
