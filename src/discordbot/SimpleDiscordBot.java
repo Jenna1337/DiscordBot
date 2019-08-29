@@ -18,7 +18,6 @@ import net.dv8tion.jda.core.entities.User;
 import net.dv8tion.jda.core.events.message.GenericMessageEvent;
 import utils.DomainNameBlocker;
 import utils.sql.BackedHashmap;
-import utils.tuples.Triplet;
 
 public class SimpleDiscordBot extends AbstractDiscordBot
 {
@@ -83,63 +82,64 @@ public class SimpleDiscordBot extends AbstractDiscordBot
 	/**
 	 * The thread to cycle through the status messages.
 	 */
-	private Thread autoStatusCycler;
+	private Thread autoPresenceCycler;
 	/**
 	 * The list of status messages to cycle through.
 	 */
-	private List<Triplet<OnlineStatus, Game, Boolean>> autoStatusList;
+	private List<StatusMessage> autoStatusList;
 	/**
 	 * Default sleep time is 30 minutes.
 	 */
-	private long autoStatusSleepTimeMillis = 1000 * 60 * 30;
-	boolean autoStatusCyclerStopped = false;
-	public boolean setAutoStatusMessageList(List<Triplet<OnlineStatus, Game, Boolean>> statuses){
-		if(autoStatusCycler!=null && (autoStatusCycler.isAlive() || !autoStatusCycler.getState().equals(State.TERMINATED))){
-			autoStatusCyclerStopped = true;
+	private long autoPresenceSleepTimeMillis = 1000 * 60 * 30;
+	boolean autoPresenceCyclerStopped = false;
+	private String autoPresenceThreadName = "autoPresenceCycler";
+	public boolean setAutoPresenceList(List<StatusMessage> presences){
+		if(autoPresenceCycler!=null && (autoPresenceCycler.isAlive() || !autoPresenceCycler.getState().equals(State.TERMINATED))){
+			autoPresenceCyclerStopped = true;
 			try{
-				autoStatusCycler.join(3000);
+				autoPresenceCycler.join(3000);
 			}
 			catch(InterruptedException e){
-				autoStatusCycler.interrupt();
+				autoPresenceCycler.interrupt();
 				try{
-					autoStatusCycler.join(3000);
+					autoPresenceCycler.join(3000);
 				}
 				catch(InterruptedException e1){
-					System.err.println("Failed to stop autoStatusCycler Thread.");
+					System.err.println("Failed to stop "+autoPresenceThreadName+" Thread.");
 					return false;
 				}
 			}
 		}
-		autoStatusList = statuses;
-		autoStatusCycler = new Thread((Runnable)()->{
+		autoStatusList = presences;
+		autoPresenceCycler = new Thread((Runnable)()->{
 			try{
 				for(int i=0;i<autoStatusList.size();++i){
 					try{
-						setStatusMessage(autoStatusList.get(i));
+						setPresence(autoStatusList.get(i));
 					}
 					catch(Exception e){
-						System.err.println("[autoStatusCycler] Could not set status message.");
+						System.err.println("["+autoPresenceThreadName+"] Could not set presence.");
 					}
-					if(autoStatusCyclerStopped)
+					if(autoPresenceCyclerStopped)
 						return;
 					
-					Thread.sleep(autoStatusSleepTimeMillis);
+					Thread.sleep(autoPresenceSleepTimeMillis);
 				}
 			}
 			catch(InterruptedException e){
 				return;
 			}
 		});
-		autoStatusCycler.setName("autoStatusCycler");
-		System.out.println("autoStatusCycler Thread starting.");
-		autoStatusCyclerStopped = false;
-		autoStatusCycler.start();
+		autoPresenceCycler.setName(autoPresenceThreadName);
+		System.out.println(autoPresenceThreadName+" Thread starting.");
+		autoPresenceCyclerStopped = false;
+		autoPresenceCycler.start();
 		return true;
 	}
-	public void setStatusMessage(Triplet<OnlineStatus, Game, Boolean> stmsg){
-		this.jda.getPresence().setPresence(stmsg.getFirst(), stmsg.getSecond(), stmsg.getThird());
+	public void setPresence(StatusMessage statusMessage){
+		this.jda.getPresence().setPresence(statusMessage.getOnlineStatus(), statusMessage.getGame(), statusMessage.isIdle());
 	}
-	public void setStatusMessage(OnlineStatus status, Game game, boolean idle){
+	public void setPresence(OnlineStatus status, Game game, boolean idle){
 		this.jda.getPresence().setPresence(status, game, idle);
 	}
 }

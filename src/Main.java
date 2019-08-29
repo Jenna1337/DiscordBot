@@ -66,7 +66,7 @@ public class Main
 		System.out.println("Starting");
 		SimpleDiscordBot bot = new SimpleDiscordBot(botprops.getProperty("TOKEN"), botprops.getProperty("CLIENT_ID"), perms, botprops.getProperty("USER_ID"), botprops.getProperty("PREFIX"));
 		System.out.println(bot.getInviteURL());
-		bot.setAutoStatusMessageList(Arrays.asList(
+		bot.setAutoPresenceList(Arrays.asList(
 				StandardStatusTriplets.WATCHING.newInstance(" for malicious links"),
 				StandardStatusTriplets.LISTENING.newInstance(bot.getJDA().getGuilds().size()+" server" + (bot.getJDA().getGuilds().size()!=1 ? "s" : "")),
 				StandardStatusTriplets.PLAYING.newInstance("Global Thermonuclear War")
