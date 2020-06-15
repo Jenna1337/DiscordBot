@@ -25,7 +25,6 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
-import discordbot.TextLocation;
 import javafx.util.Pair;
 import utils.sql.SQLite3DatabaseLink;
 import static utils.WebRequest.*;
